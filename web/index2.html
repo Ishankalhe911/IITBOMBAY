@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Video → Audio → Text</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+  <div class="container">
+    <header>
+      <h1>🎥 Video → 🎵 Audio → 📝 Text</h1>
+      <p class="hint">Upload a video OR paste a video link.</p>
+    </header>
+
+    <div class="controls">
+      <button id="selectBtn" class="btn">Select Video & Auto Process</button>
+      <div id="status" class="status">Idle</div>
+      <button class="btn" id="clearLocalVideoBtn">Clear Local Selected Video</button>
+
+    </div>
+
+    <!-- ⭐ NEW URL INPUT -->
+    <div class="controls">
+      <input id="videoURL" type="text" placeholder="Paste YouTube / Drive / Insta / FB link" style="flex:1;padding:10px;border-radius:8px;border:1px solid #333;background:#1a1a1a;color:white;">
+      <button id="urlBtn" class="btn">Process Link</button>
+    </div>
+
+    <section class="cards">
+      <div class="card">
+        <h3>Selected Video</h3>
+        <div id="videoPath" class="path">—</div>
+      </div>
+
+      <div class="card">
+        <h3>Generated Audio</h3>
+        <div id="audioPath" class="path">—</div>
+      </div>
+
+      <div class="card wide">
+        <h3>Transcription</h3>
+        <pre id="transcript" class="transcript">—</pre>
+        <div class="actions">
+          <button id="copyBtn" class="small">Copy</button>
+          <button id="saveBtn" class="small">Save as .txt</button>
+          <button onclick="fetch('/exit_app')">Exit</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script src="script.js"></script>
+</body>
+</html>
