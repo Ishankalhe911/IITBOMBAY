@@ -31,7 +31,6 @@
       gap: 16px;
       padding: 16px;
       box-sizing: border-box;
-      height: calc(100vh - 60px);
     }
     .panel {
       background: #020617;
@@ -41,20 +40,24 @@
       border: 1px solid #1f2937;
     }
     #left-panel {
-      flex: 1;
+      flex: 1.3;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
     #right-panel {
-      flex: 1;
+      flex: 0.9;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
     h2 {
       margin-top: 0;
       font-size: 16px;
+    }
+    h3 {
+      margin: 8px 0 4px;
+      font-size: 14px;
     }
     label {
       display: block;
@@ -89,7 +92,7 @@
     }
     textarea {
       width: 100%;
-      height: 160px;
+      height: 140px;
       padding: 8px;
       border-radius: 4px;
       border: 1px solid #374151;
@@ -110,13 +113,61 @@
       gap: 8px;
       align-items: flex-end;
     }
+    .summary-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .summary-card {
+      flex: 1;
+      padding: 8px;
+      border-radius: 6px;
+      background: #111827;
+      border: 1px solid #1f2937;
+    }
+    .summary-label {
+      font-size: 11px;
+      color: #9ca3af;
+    }
+    .summary-value {
+      font-size: 18px;
+      margin-top: 4px;
+    }
+    table {
+      width: 100%;
+      font-size: 12px;
+      border-collapse: collapse;
+      margin-top: 4px;
+    }
+    th, td {
+      padding: 4px;
+      border-bottom: 1px solid #374151;
+      text-align: left;
+    }
+    footer {
+      margin: 0 16px 16px;
+    }
+    ol, ul {
+      margin: 4px 0;
+      padding-left: 18px;
+    }
+    ol li, ul li {
+      font-size: 12px;
+      color: #9ca3af;
+      margin-bottom: 3px;
+    }
+    @media (max-width: 900px) {
+      main {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
   <header>
     <div>
-      <h1>🎓 Mentor AI – Unified Frontend</h1>
-      <span>Mentor AI backend (YOLO + depth) @ :8000 & Whisper backend @ :5000</span>
+      <h1>🎓 Mentor AI – Presentation Dashboard</h1>
+      <span>Mentor AI backend @ :8000 & URL→Text backend @ :5000</span>
     </div>
   </header>
 
@@ -125,35 +176,56 @@
     <section id="left-panel">
       <div class="panel">
         <h2>📹 Mentor AI – Presentation Analyzer</h2>
-        <label for="mentor-video">Upload video (mp4, mov, avi)</label>
+
+        <!-- Summary cards -->
+        <div class="summary-row">
+          <div class="summary-card">
+            <div class="summary-label">Depth Level</div>
+            <div id="summary-depth" class="summary-value">–</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Gestures</div>
+            <div id="summary-gestures" class="summary-value">–</div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-label">Duration</div>
+            <div id="summary-duration" class="summary-value">–</div>
+          </div>
+        </div>
+
+        <label for="mentor-video">Upload presentation video (mp4, mov, avi)</label>
         <input type="file" id="mentor-video" accept=".mp4,.mov,.avi" />
         <button id="btn-mentor-analyze">Analyze Video</button>
         <div class="status" id="status-mentor"></div>
 
-        <label for="mentor-transcript">Transcript</label>
+        <h3>Segment Depth</h3>
+        <table id="segment-table">
+          <thead>
+            <tr>
+              <th>Start (s)</th>
+              <th>End (s)</th>
+              <th>Depth</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3>Transcript</h3>
         <textarea id="mentor-transcript" readonly></textarea>
 
-        <label for="mentor-gestures">Gestures</label>
+        <h3>Gestures</h3>
         <textarea id="mentor-gestures" readonly></textarea>
 
-        <label for="mentor-depth">Depth Analysis (JSON)</label>
+        <h3>Coach Feedback</h3>
+        <textarea id="mentor-feedback" readonly></textarea>
+
+        <h3>Depth JSON (raw)</h3>
         <textarea id="mentor-depth" readonly></textarea>
       </div>
     </section>
 
-    <!-- RIGHT: Flask Whisper (local select + URL) -->
+    <!-- RIGHT: URL → Text (Flask + yt-dlp + Whisper) -->
     <section id="right-panel">
-      <div class="panel">
-        <h2>🎧 Local Video → Text (Flask + Whisper)</h2>
-        <p style="font-size:12px;color:#9ca3af;">
-          This uses the backend /select_video route, which opens a file picker on the server side.
-        </p>
-        <button id="btn-select-video">Select & Transcribe (server)</button>
-        <div class="status" id="status-select-video"></div>
-        <label for="local-result">Transcript (local video):</label>
-        <textarea id="local-result" readonly></textarea>
-      </div>
-
       <div class="panel">
         <h2>🌐 URL → Text (yt‑dlp + Whisper)</h2>
         <label for="url-input">Video URL</label>
@@ -164,24 +236,52 @@
         <div class="status" id="status-url"></div>
         <label for="url-result">Transcript (URL):</label>
         <textarea id="url-result" readonly></textarea>
+        <p style="font-size:11px; color:#9ca3af; margin-top:6px;">
+          Pipeline: yt‑dlp → video download → audio extraction → Whisper model → transcript.
+        </p>
       </div>
     </section>
   </main>
 
+  <footer>
+    <div class="panel">
+      <h2 style="font-size:14px; margin-top:0;">ℹ️ How to Use</h2>
+      <ol>
+        <li>On the left, upload your presentation video and click <b>Analyze Video</b>.</li>
+        <li>Review depth level, gesture summary, and segment‑wise depth table.</li>
+        <li>Read automatic coach feedback to improve your next presentation.</li>
+        <li>On the right, paste any online video URL to get the raw transcript using Whisper.</li>
+      </ol>
+      <h3 style="font-size:13px; margin-top:8px;">Tech Stack</h3>
+      <ul>
+        <li>Backend 1: FastAPI, YOLOv8 Pose, faster‑whisper, Gemini/OpenAI.</li>
+        <li>Backend 2: Flask, yt‑dlp, OpenAI Whisper.</li>
+        <li>Frontend: HTML, CSS, vanilla JavaScript (fetch‑based API calls).</li>
+      </ul>
+    </div>
+  </footer>
+
   <script>
-    const MENTOR_BASE = "http://localhost:8000"; // FastAPI/Backend 1
-    const WHISPER_BASE = "http://localhost:5000"; // Flask/Backend 2
+    const MENTOR_BASE = "http://localhost:8000";  // FastAPI backend (first file)
+    const WHISPER_BASE = "http://localhost:5000"; // Flask backend (second file)
+
+    // Elements for Mentor AI
+    const summaryDepth = document.getElementById("summary-depth");
+    const summaryGestures = document.getElementById("summary-gestures");
+    const summaryDuration = document.getElementById("summary-duration");
+    const segmentTableBody = document.querySelector("#segment-table tbody");
+    const mentorStatus = document.getElementById("status-mentor");
+    const transcriptEl = document.getElementById("mentor-transcript");
+    const gesturesEl = document.getElementById("mentor-gestures");
+    const depthEl = document.getElementById("mentor-depth");
+    const feedbackEl = document.getElementById("mentor-feedback");
 
     // ---- Mentor AI: /analyze endpoint ----
     document.getElementById("btn-mentor-analyze").addEventListener("click", async () => {
       const fileInput = document.getElementById("mentor-video");
-      const statusEl = document.getElementById("status-mentor");
-      const transcriptEl = document.getElementById("mentor-transcript");
-      const gesturesEl = document.getElementById("mentor-gestures");
-      const depthEl = document.getElementById("mentor-depth");
 
       if (!fileInput.files.length) {
-        statusEl.textContent = "Please select a video file first.";
+        mentorStatus.textContent = "Please select a video file first.";
         return;
       }
 
@@ -189,10 +289,15 @@
       const formData = new FormData();
       formData.append("file", file);
 
-      statusEl.textContent = "Uploading and analyzing...";
+      mentorStatus.textContent = "Uploading and analyzing...";
       transcriptEl.value = "";
       gesturesEl.value = "";
       depthEl.value = "";
+      feedbackEl.value = "";
+      summaryDepth.textContent = "–";
+      summaryGestures.textContent = "–";
+      summaryDuration.textContent = "–";
+      segmentTableBody.innerHTML = "";
 
       try {
         const res = await fetch(`${MENTOR_BASE}/analyze`, {
@@ -205,36 +310,43 @@
         }
         const data = await res.json();
 
-        // Expecting your AnalysisResponse structure
+        // Fill main fields
         transcriptEl.value = data.transcript || "";
         gesturesEl.value = data.gestures || "";
         depthEl.value = JSON.stringify(data.depth, null, 2);
+        feedbackEl.value = data.depth?.recommendation || "";
 
-        statusEl.textContent = `Done. Duration: ${data.duration_seconds.toFixed(1)}s`;
+        // Summary cards
+        const duration = data.duration_seconds || 0;
+        summaryDuration.textContent = `${duration.toFixed(1)} s`;
+
+        const depthScore = data.depth?.overall_depth_score ?? 0;
+        let depthLabel = "Shallow";
+        if (depthScore > 0.75) depthLabel = "Advanced";
+        else if (depthScore > 0.5) depthLabel = "Good";
+        else if (depthScore > 0.3) depthLabel = "Basic";
+        summaryDepth.textContent = `${depthLabel} (${depthScore.toFixed(2)})`;
+
+        const gesturesSummary = (data.gestures || "")
+          .replace(/\*\*Gestures:\*\*\s*/i, "")
+          .split("|")[0]
+          .trim();
+        summaryGestures.textContent = gesturesSummary || "N/A";
+
+        // Segment table
+        (data.depth?.per_segment || []).slice(0, 8).forEach(seg => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${seg.start.toFixed(1)}</td>
+            <td>${seg.end.toFixed(1)}</td>
+            <td>${seg.depth_score.toFixed(2)}</td>
+          `;
+          segmentTableBody.appendChild(tr);
+        });
+
+        mentorStatus.textContent = "Analysis complete.";
       } catch (err) {
-        statusEl.textContent = "Error: " + err.message;
-      }
-    });
-
-    // ---- Whisper: /select_video ----
-    document.getElementById("btn-select-video").addEventListener("click", async () => {
-      const statusEl = document.getElementById("status-select-video");
-      const outEl = document.getElementById("local-result");
-
-      statusEl.textContent = "Waiting for server-side file selection and transcription...";
-      outEl.value = "";
-
-      try {
-        const res = await fetch(`${WHISPER_BASE}/select_video`);
-        const data = await res.json();
-        if (data.error) {
-          statusEl.textContent = "Error: " + data.error;
-          return;
-        }
-        outEl.value = data.text || "";
-        statusEl.textContent = `Done in ${data.processing_time}s (server file picker).`;
-      } catch (err) {
-        statusEl.textContent = "Error: " + err.message;
+        mentorStatus.textContent = "Error: " + err.message;
       }
     });
 
@@ -264,8 +376,11 @@
           statusEl.textContent = "Error: " + data.error;
           return;
         }
-        outEl.value = data.text || "";
-        statusEl.textContent = `Done in ${data.processing_time}s.`;
+        const text = data.text || "";
+        outEl.value = text;
+
+        const wordCount = text.split(/\s+/).filter(Boolean).length;
+        statusEl.textContent = `Done in ${data.processing_time}s • ~${wordCount} words`;
       } catch (err) {
         statusEl.textContent = "Error: " + err.message;
       }
@@ -273,4 +388,3 @@
   </script>
 </body>
 </html>
-
