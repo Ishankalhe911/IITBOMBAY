@@ -8,3 +8,8 @@ openai
 python-dotenv
 ffmpeg-python
 torch
+flask
+moviepy
+openai-whisper
+yt-dlp
+numpy
