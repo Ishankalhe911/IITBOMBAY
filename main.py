@@ -227,21 +227,22 @@ def analyze_gestures(video_path: str, model: Optional[YOLO]) -> str:
     if model is None:
         return "❌ YOLO model unavailable"
 
-    st.info("🤲 Analyzing gestures...")
+    st.info("🤲 Analyzing gestures & engagement...")
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
         return "❌ Could not open video for gesture analysis"
 
     hand_frames = 0
+    face_frames = 0
     total_frames = 0
+    eye_contact_frames = 0
 
     try:
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         if frame_count <= 0:
             return "❌ No frames in video"
 
-        # 🔥 SPEED OPTIMIZATION: Only 25 frames instead of 100 (4x faster)
         step = max(frame_count // 25, 1)
         frame_indices = list(range(0, frame_count, step))[:25]
 
@@ -252,40 +253,70 @@ def analyze_gestures(video_path: str, model: Optional[YOLO]) -> str:
                 continue
 
             total_frames += 1
-
-            # 🔥 SPEED: Resize frame to 320x320 before YOLO (2x faster)
-            frame_small = cv2.resize(frame, (320, 320))
+            frame_small = cv2.resize(frame, (960, 960))  # Use higher resolution
             
-            results = model(frame_small, verbose=False, imgsz=320)
-            if not results or results[0].keypoints is None or len(results[0].keypoints) == 0:
+            results = model(frame_small, verbose=False, imgsz=960)
+            if not results or not results[0].keypoints or len(results[0].keypoints) == 0:
                 continue
 
             kpts = results[0].keypoints.xy[0].cpu().numpy()
-            if len(kpts) >= 11:
+            confs = results[0].keypoints.conf[0].cpu().numpy()  # Confidence scores
+
+            # Only proceed if enough keypoints with high confidence
+            if len(kpts) >= 11 and confs[0] > 0.5 and confs[9] > 0.5 and confs[10] > 0.5:
+                # HAND GESTURES
                 left_hand = kpts[9]
                 right_hand = kpts[10]
-                if (left_hand[0] > 0 and left_hand[1] > 0) or (right_hand[0] > 0 and right_hand[1] > 0):
+                if (left_hand[0] > 50 and left_hand[1] > 50 and left_hand[0] < 870) or \
+                   (right_hand[0] > 50 and right_hand[1] > 50 and right_hand[0] < 870):
                     hand_frames += 1
+                
+                # EYE CONTACT
+                nose = kpts[0]
+                if 300 < nose[0] < 660 and nose[1] < 600:
+                    eye_contact_frames += 1
+                
+                # FACE DETECTED
+                face_frames += 1
 
     except Exception as e:
         return f"❌ Gesture error: {str(e)[:80]}"
     finally:
-        cap.release()  # ✅ ONLY THIS - no destroyAllWindows()
+        cap.release()
 
     if total_frames == 0:
-        return "❌ No frames analyzed for gestures"
+        return "❌ No frames analyzed"
 
     hand_ratio = hand_frames / total_frames
-    findings = []
-    if hand_ratio > 0.5:
-        findings.append("👍 Active hand gestures")
-    elif hand_ratio > 0.2:
-        findings.append("👌 Moderate hand usage")
-    else:
-        findings.append("🙌 Hands mostly static")
-    findings.append(f"📊 Analyzed {total_frames} sampled frames ({hand_frames} with visible hands)")
+    face_ratio = face_frames / total_frames
+    eye_ratio = eye_contact_frames / total_frames
 
-    return "**Gestures:** " + " | ".join(findings)
+    findings = []
+    
+    if hand_ratio > 0.6:
+        findings.append("👋 **Active hand gestures** - Good engagement")
+    elif hand_ratio > 0.3:
+        findings.append("🙌 **Moderate gestures** - Natural movement")
+    else:
+        findings.append("👐 **Minimal gestures** - More static delivery")
+    
+    if eye_ratio > 0.5:
+        findings.append("👁️ **Strong eye contact** - Confident delivery")
+    elif eye_ratio > 0.2:
+        findings.append("👀 **Moderate eye contact** - Looking at camera")
+    else:
+        findings.append("😶 **Limited eye contact** - More face-away moments")
+    
+    if face_ratio > 0.7:
+        findings.append("✅ **Face clearly visible** throughout")
+    elif face_ratio > 0.3:
+        findings.append("⚠️ **Face visible intermittently**")
+    else:
+        findings.append("❌ **Face often not detected**")
+    
+    findings.append(f"📊 {total_frames} frames analyzed")
+
+    return "**Engagement Analysis:**\n" + " | ".join(findings)
 
 
 # --- Main Pipeline ---
