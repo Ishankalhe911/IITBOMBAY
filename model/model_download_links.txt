@@ -1,0 +1,8 @@
+# Model download notes
+
+This file lists suggested sources to download large pre-trained weights. Do not commit these into git.
+
+- YOLOv11n pose (example): https://example.com/yolo11n-pose.pt  # replace with real link
+- YOLOv8n-pose: https://github.com/ultralytics/ultralytics  # follow repo instructions
+- Faster-Whisper models: https://github.com/guillaumekln/faster-whisper
+- Ollama: https://ollama.com (optional local LLM)
