@@ -1,0 +1,8 @@
+streamlit
+ultralytics
+opencv-python
+faster-whisper
+pydantic
+requests
+numpy
+torch
