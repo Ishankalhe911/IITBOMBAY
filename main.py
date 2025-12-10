@@ -4,7 +4,7 @@ import json
 import subprocess
 import requests
 import re
-from typing import Optional, Any
+from typing import Optional, Any, Tuple
 from pydantic import BaseModel, Field
 import cv2
 from ultralytics import YOLO
@@ -12,6 +12,109 @@ from fastapi import UploadFile
 import streamlit as st
 import time
 
+import whisper
+from moviepy.editor import VideoFileClip
+import yt_dlp
+
+
+# ==========================
+# Reusable video → text helpers
+# ==========================
+
+MODEL_NAME = "base"  # change to "small" / "medium" / "large" if you want
+_whisper_model = None
+
+def get_whisper_model():
+    """
+    Lazy-load Whisper model once and reuse.
+    """
+    global _whisper_model
+    if _whisper_model is None:
+        print(f"Loading Whisper model: {MODEL_NAME} ...")
+        _whisper_model = whisper.load_model(MODEL_NAME)
+        print("Whisper model loaded.")
+    return _whisper_model
+
+def video_file_to_text(video_path: str) -> Tuple[str, float]:
+    """
+    Convert a local video file to transcript text using Whisper.
+    Returns (text, processing_time_seconds).
+    Does NOT delete the original video file.
+    """
+    start_time = time.time()
+
+    if not os.path.exists(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
+
+    audio_path = video_path.rsplit(".", 1)[0] + ".mp3"
+
+    clip = VideoFileClip(video_path)
+
+    # remove old audio if exists
+    if os.path.exists(audio_path):
+        try:
+            os.remove(audio_path)
+        except OSError:
+            pass
+
+    # extract audio
+    clip.audio.write_audiofile(audio_path, verbose=False, logger=None)
+
+    model = get_whisper_model()
+    result = model.transcribe(audio_path, fp16=False)  # fp16=False for CPU
+    text = result.get("text", "").strip()
+
+    # clean up
+    try:
+        os.remove(audio_path)
+    except OSError:
+        pass
+
+    clip.close()
+
+    processing_time = time.time() - start_time
+    return text, processing_time
+
+def url_to_text(url: str, download_filename: str = "downloaded_video.mp4") -> Tuple[str, float, str]:
+    """
+    Download a video from URL (e.g. YouTube) and return:
+    - transcript text
+    - processing_time_seconds
+    - local video path (for further analysis)
+    """
+    start_time = time.time()
+
+    if not url:
+        raise ValueError("No URL provided")
+
+    ydl_opts = {
+        "format": "best",
+        "outtmpl": download_filename,
+        "quiet": True,
+        "noplaylist": True,
+        "ignoreerrors": True,
+        "retries": 3,
+        "cachedir": False,
+        "default_search": "auto",
+        "geo_bypass": True,
+        "no_warnings": True,
+    }
+
+    # Download video
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        ydl.download([url])
+
+    # Reuse your existing helper to get text from local file
+    text, _ = video_file_to_text(download_filename)
+
+    processing_time = time.time() - start_time
+    # DO NOT delete download_filename here so that OpenCV/YOLO can read it
+    return text, processing_time, download_filename
+
+
+# ==========================
+# Existing Mentor AI app
+# ==========================
 
 # --- Pydantic Models (TOP) ---
 class SegmentDepth(BaseModel):
@@ -44,7 +147,7 @@ def get_pose_model():
     """Cached YOLO model loader - OPTIMIZED for speed."""
     try:
         st.info("⬇️ Loading YOLOv11n pose model (FASTEST)...")
-        # 🔥 SPEED: YOLOv11 Nano - 20% faster than YOLOv8n
+        # SPEED: YOLOv11 Nano - assumed faster than YOLOv8n [web:27][web:30]
         model = YOLO("yolo11n-pose.pt")
         st.success("✅ YOLOv11n Pose Model Loaded! (5x faster)")
         return model
@@ -163,7 +266,10 @@ def analyze_concept_depth(transcript: str) -> DepthAnalysis:
     tech_terms = sum(1 for w in words if any(term in w for term in tech_terms_list))
 
     complexity = unique_words / word_count
-    depth_score = min(0.95, 0.2 + complexity * 0.3 + (long_words / word_count) * 0.2 + (tech_terms / word_count) * 0.3)
+    depth_score = min(
+        0.95,
+        0.2 + complexity * 0.3 + (long_words / word_count) * 0.2 + (tech_terms / word_count) * 0.3
+    )
 
     reasoning = (
         f"{word_count} words, {sentences} sentences, {unique_words} unique terms. "
@@ -173,7 +279,8 @@ def analyze_concept_depth(transcript: str) -> DepthAnalysis:
     segment_duration = max(15, word_count // 10)
     segments = [
         SegmentDepth(start=0, end=min(segment_duration, 60), depth_score=round(depth_score, 2)),
-        SegmentDepth(start=segment_duration, end=min(segment_duration * 2, 120), depth_score=round(max(0, depth_score - 0.1), 2)),
+        SegmentDepth(start=segment_duration, end=min(segment_duration * 2, 120),
+                     depth_score=round(max(0, depth_score - 0.1), 2)),
     ]
 
     return DepthAnalysis(
@@ -183,7 +290,7 @@ def analyze_concept_depth(transcript: str) -> DepthAnalysis:
     )
 
 
-# --- FAST LOCAL WHISPER ---
+# --- FAST LOCAL WHISPER (existing) ---
 def transcribe(video_path: str) -> str:
     audio_path = tempfile.mktemp(suffix=".wav")
     FFMPEG_PATH = r"C:\ffmpeg\bin\ffmpeg.exe"  # UPDATE FOR YOUR PATH!
@@ -222,7 +329,7 @@ def transcribe(video_path: str) -> str:
         return f"❌ Transcription failed: {e}"
 
 
-# --- ULTRA-FAST GESTURE ANALYSIS (USER-PROVIDED + SPEED OPTIMIZED) ---
+# --- ULTRA-FAST GESTURE ANALYSIS ---
 def analyze_gestures(video_path: str, model: Optional[YOLO]) -> str:
     if model is None:
         return "❌ YOLO model unavailable"
@@ -253,30 +360,28 @@ def analyze_gestures(video_path: str, model: Optional[YOLO]) -> str:
                 continue
 
             total_frames += 1
-            frame_small = cv2.resize(frame, (960, 960))  # Use higher resolution
-            
+            frame_small = cv2.resize(frame, (960, 960))
+
             results = model(frame_small, verbose=False, imgsz=960)
             if not results or not results[0].keypoints or len(results[0].keypoints) == 0:
                 continue
 
             kpts = results[0].keypoints.xy[0].cpu().numpy()
-            confs = results[0].keypoints.conf[0].cpu().numpy()  # Confidence scores
+            confs = results[0].keypoints.conf[0].cpu().numpy()
 
-            # Only proceed if enough keypoints with high confidence
             if len(kpts) >= 11 and confs[0] > 0.5 and confs[9] > 0.5 and confs[10] > 0.5:
-                # HAND GESTURES
                 left_hand = kpts[9]
                 right_hand = kpts[10]
-                if (left_hand[0] > 50 and left_hand[1] > 50 and left_hand[0] < 870) or \
-                   (right_hand[0] > 50 and right_hand[1] > 50 and right_hand[0] < 870):
+                if (
+                    (left_hand[0] > 50 and left_hand[1] > 50 and left_hand[0] < 870)
+                    or (right_hand[0] > 50 and right_hand[1] > 50 and right_hand[0] < 870)
+                ):
                     hand_frames += 1
-                
-                # EYE CONTACT
+
                 nose = kpts[0]
                 if 300 < nose[0] < 660 and nose[1] < 600:
                     eye_contact_frames += 1
-                
-                # FACE DETECTED
+
                 face_frames += 1
 
     except Exception as e:
@@ -292,28 +397,28 @@ def analyze_gestures(video_path: str, model: Optional[YOLO]) -> str:
     eye_ratio = eye_contact_frames / total_frames
 
     findings = []
-    
+
     if hand_ratio > 0.6:
         findings.append("👋 **Active hand gestures** - Good engagement")
     elif hand_ratio > 0.3:
         findings.append("🙌 **Moderate gestures** - Natural movement")
     else:
         findings.append("👐 **Minimal gestures** - More static delivery")
-    
+
     if eye_ratio > 0.5:
         findings.append("👁️ **Strong eye contact** - Confident delivery")
     elif eye_ratio > 0.2:
         findings.append("👀 **Moderate eye contact** - Looking at camera")
     else:
         findings.append("😶 **Limited eye contact** - More face-away moments")
-    
+
     if face_ratio > 0.7:
         findings.append("✅ **Face clearly visible** throughout")
     elif face_ratio > 0.3:
         findings.append("⚠️ **Face visible intermittently**")
     else:
         findings.append("❌ **Face often not detected**")
-    
+
     findings.append(f"📊 {total_frames} frames analyzed")
 
     return "**Engagement Analysis:**\n" + " | ".join(findings)
@@ -331,11 +436,10 @@ def run_full_analysis(video_file: UploadFile, temp_video_path: str) -> AnalysisR
 
     st.metric("📹 Duration", f"{duration:.1f}s")
 
-    # Parallel processing simulation with status updates
     transcript = transcribe(temp_video_path)
     gestures = analyze_gestures(temp_video_path, pose_model)
     depth = analyze_concept_depth(transcript)
-    
+
     total_time = time.time() - start_time
     st.success(f"🚀 Analysis complete in {total_time:.1f}s!")
 
@@ -354,8 +458,10 @@ def display_analysis_results(response: AnalysisResponse):
         st.info(f"**Reasoning:** {response.depth.reasoning}")
 
     st.subheader("📊 Segment Analysis")
-    segments = [{"Start": f"{s.start:.0f}s", "End": f"{s.end:.0f}s", "Depth": f"{s.depth_score:.1f}"}
-                for s in response.depth.per_segment[:5]]
+    segments = [
+        {"Start": f"{s.start:.0f}s", "End": f"{s.end:.0f}s", "Depth": f"{s.depth_score:.1f}"}
+        for s in response.depth.per_segment[:5]
+    ]
     st.table(segments)
 
     tab1, tab2 = st.tabs(["📝 Transcript", "🤲 Gestures"])
@@ -363,9 +469,6 @@ def display_analysis_results(response: AnalysisResponse):
         st.text_area("Transcript", response.transcript, height=200)
     with tab2:
         st.markdown(response.gestures)
-
-
-# --- Main App ---
 def main():
     st.set_page_config(page_title="Mentor AI", layout="wide")
     st.title("🎓 Mentor AI: Presentation Analyzer")
@@ -374,44 +477,88 @@ def main():
 
     st.info("🚀 **5x FASTER** - YOLOv11n + Optimized Processing!")
 
-    uploaded_file = st.file_uploader("📁 Upload Video", type=["mp4", "mov", "avi"])
+    tab_video, tab_url = st.tabs(["📁 Upload Video", "🌐 Analyze from URL"])
 
-    if uploaded_file:
-        st.video(uploaded_file)
-        st.info(f"**{uploaded_file.name}** ({uploaded_file.size / 1024 / 1024:.1f} MB)")
+    # --------- TAB 1: LOCAL VIDEO UPLOAD ----------
+    with tab_video:
+        uploaded_file = st.file_uploader(
+            "📁 Upload Video",
+            type=["mp4", "mov", "avi"],
+            key="file_uploader_local"
+        )
 
-        if st.button("🚀 Analyze Video", type="primary"):
-            with st.spinner("🔬 Ultra-fast processing..."):
-                temp_path = tempfile.mktemp(suffix=f".{uploaded_file.name.split('.')[-1]}")
-                try:
-                    with open(temp_path, "wb") as f:
-                        f.write(uploaded_file.getvalue())
-                    result = run_full_analysis(uploaded_file, temp_path)
-                    display_analysis_results(result)
-                except Exception as e:
-                    st.error(f"❌ Error: {e}")
-                    import traceback
-                    st.code(traceback.format_exc())
-                finally:
-                    if os.path.exists(temp_path):
-                        os.remove(temp_path)
-    else:
-        st.info("👆 Upload video to start!")
-        st.markdown("""
-        ### ✅ **5x FASTER Works with:**
-        - 🎤 Local Whisper (faster-whisper)
-        - 🤲 YOLOv11n gestures (25 frames only)
-        - 🧠 Ollama AI (FREE) **OR** Smart local analysis
+        if uploaded_file:
+            st.video(uploaded_file)
+            st.info(f"**{uploaded_file.name}** ({uploaded_file.size / 1024 / 1024:.1f} MB)")
 
-        ### ⚙️ **Quick Setup:**
-        ```
-        pip install streamlit ultralytics faster-whisper opencv-python pydantic requests
-        ```
-        **FFmpeg:** Update path at `FFMPEG_PATH`
-        **Ollama:** Download from https://ollama.com
-        **YOLOv11n:** Auto-downloads on first run
-        """)
+            if st.button("🚀 Analyze Uploaded Video", type="primary"):
+                with st.spinner("🔬 Ultra-fast processing..."):
+                    temp_path = tempfile.mktemp(suffix=f".{uploaded_file.name.split('.')[-1]}")
+                    try:
+                        with open(temp_path, "wb") as f:
+                            f.write(uploaded_file.getvalue())
+                        result = run_full_analysis(uploaded_file, temp_path)
+                        display_analysis_results(result)
+                    except Exception as e:
+                        st.error(f"❌ Error: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+                    finally:
+                        if os.path.exists(temp_path):
+                            os.remove(temp_path)
+        else:
+            st.info("👆 Upload a video in this tab to analyze.")
 
+    # --------- TAB 2: URL → FULL ANALYSIS (TRANSCRIPT + GESTURES + DEPTH) ----------
+    with tab_url:
+        st.subheader("🌐 Analyze Video from URL (Whisper + Gestures + Depth)")
+
+        url = st.text_input("Paste video URL (YouTube, etc.)", key="video_url_input")
+        if st.button("🚀 Analyze URL Video", key="url_analyze_button"):
+            if not url.strip():
+                st.warning("Please enter a URL first.")
+            else:
+                temp_video_path = None
+                with st.spinner("⏳ Downloading, transcribing, and analyzing..."):
+                    try:
+                        # Download + transcribe from URL (returns text, seconds, and local path)
+                        text, sec, temp_video_path = url_to_text(
+                            url,
+                            download_filename=tempfile.mktemp(suffix=".mp4")
+                        )
+                        st.success(f"✅ Transcription complete in {sec:.1f}s")
+
+                        # Fake UploadFile for compatibility with run_full_analysis
+                        fake_upload = UploadFile(filename="url_video.mp4", file=None)
+
+                        # Run full pipeline (duration + gestures + depth)
+                        result = run_full_analysis(fake_upload, temp_video_path)
+
+                        # Override transcript with the URL Whisper transcript
+                        result.transcript = text
+
+                        # Show full analysis (same UI as upload)
+                        display_analysis_results(result)
+
+                    except Exception as e:
+                        st.error(f"❌ URL analysis failed: {e}")
+                        import traceback
+                        st.code(traceback.format_exc())
+                    finally:
+                        if temp_video_path and os.path.exists(temp_video_path):
+                            os.remove(temp_video_path)
+
+    # Footer info
+    st.markdown("""
+    ---
+    ### ⚙️ Quick Setup:
+    - This app uses:
+      - Local Whisper (faster-whisper) for uploaded video.
+      - OpenAI Whisper (via `whisper` + `moviepy` + `yt_dlp`) for URL videos.
+      - YOLO pose for gesture analysis.
+    """)
+
+ 
 
 if __name__ == "__main__":
     main()
