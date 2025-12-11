@@ -240,6 +240,27 @@ Weighted composite score aligned with hackathon criteria.
 
 ---
 
+
+
+## Things Left in Implementation (Current Status)
+
+The following components are planned and partially implemented but not fully integrated:
+
+1. **Database and Dashboard Integration**
+
+   * Dashboard UI structure is built
+   * Database linking/connection logic is pending
+
+2. **Database Connection With Main Website**
+
+   * Backend–DB binding still needs to be implemented
+   * Intended for storing mentor scores, video metadata, and analytics
+
+These features will complete the system’s ability to store evaluations, visualize historical insights, and integrate end-to-end with a centralized platform.
+
+
+
+
 ## 👥 Team
 
 **Abhishek Boyane**
