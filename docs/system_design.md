@@ -1,21 +1,180 @@
-# System Design
+System Design
 
-## Overview
-The system ingests a mentor's recorded video and outputs a structured analysis including:
-- transcript (text)
-- engagement/gesture summary
-- concept depth score and per-segment analysis
+This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design focuses on modularity, reproducibility, and CPU-friendly multimodal processing.
 
-## Pipeline steps
-1. **Upload video (Streamlit UI)** - user uploads mp4/mov/avi
-2. **Audio extraction** - ffmpeg extracts a mono 16kHz WAV
-3. **Transcription** - faster-whisper converts audio → transcript
-4. **Gesture analysis** - YOLO pose model samples frames and computes gesture/eye-contact metrics
-5. **Depth analysis** - local heuristic or Ollama model to estimate concept depth (0-1)
-6. **Report generation** - Streamlit displays metrics, transcript, and suggestions
+1. High-Level Workflow
+                ┌────────────────────────┐
+                │     Video Input        │
+                │ (Upload or URL Fetch)  │
+                └─────────────┬──────────┘
+                              │
+                ┌─────────────▼─────────────┐
+                │  Audio Extraction (FFmpeg) │
+                └─────────────┬─────────────┘
+                              │
+                ┌─────────────▼─────────────┐
+                │   Speech-to-Text (Whisper) │
+                └─────────────┬─────────────┘
+                              │
+                ┌─────────────▼────────────┐
+                │ Transcript Processing     │
+                │ (Clarity + Segmentation)  │
+                └─────────────┬────────────┘
+                              │
+     ┌────────────────────────▼────────────────────────┐
+     │         Parallel Multimodal Processing          │
+     │                                                 │
+     │   ┌──────────────────────────┐   ┌───────────┐ │
+     │   │ Visual/Gesture Analysis  │   │ Depth AI   │ │
+     │   │ (YOLO Pose Sampling)     │   │ LLM/Heur.  │ │
+     │   └──────────────────────────┘   └───────────┘ │
+     └────────────────────────┬───────────────────────┘
+                              │
+                ┌─────────────▼────────────┐
+                │     Metric Aggregation    │
+                │  (Weighted Scoring Model) │
+                └─────────────┬────────────┘
+                              │
+                ┌─────────────▼────────────┐
+                │       Streamlit UI       │
+                │  Results + Visualization │
+                └──────────────────────────┘
 
-## Data flow
-Video file -> ffmpeg -> WAV -> whisper -> transcript
-Video file -> frame sampling -> YOLO pose -> gestures summary
-Transcript -> depth analysis -> depth score
-All outputs -> final response object
+2. Components
+2.1 Streamlit UI (src/app.py)
+
+Manages input: upload or URL-based videos
+
+Displays processing steps, results, and tables
+
+Orchestrates calls to all AI modules
+
+Suitable for demo and prototype evaluation
+
+2.2 Audio Extraction (utils/ffmpeg_utils.py)
+
+Converts video → WAV using FFmpeg
+
+Normalizes audio for Whisper STT
+
+Handles file safety and temporary paths
+
+2.3 Transcription Module (ai/transcribe.py)
+
+Uses faster-whisper for CPU-efficient transcription
+
+Falls back to standard Whisper when needed
+
+Produces:
+
+transcript text
+
+word count
+
+clarity metrics
+
+2.4 Gesture Analysis (ai/gesture_analysis.py)
+
+YOLOv11n/YOLOv8n pose estimation
+
+Samples ~25 frames for fast evaluation
+
+Tracks:
+
+Hand movement frequency
+
+Eye contact
+
+Face visibility
+
+Engagement score
+
+2.5 Depth Analysis (ai/depth_analysis.py)
+
+Two-layer depth scoring:
+
+Ollama Llama-based reasoning (if available)
+
+Fallback heuristic engine (vocabulary richness, technical terms, segmentation)
+
+Returns structured depth JSON:
+
+{
+  "overall_depth_score": 0.71,
+  "reasoning": "...",
+  "per_segment": [...]
+}
+
+2.6 Scoring & Metrics
+
+Weighted according to problem statement:
+
+Metric	Weight
+Engagement	20%
+Communication	20%
+Technical Depth	30%
+Clarity	20%
+Interaction Quality	10%
+
+Modules contribute to specific metrics.
+
+3. Data Flow
+Input
+
+.mp4, .mov, .avi
+
+YouTube/public URLs
+
+Intermediate Outputs
+
+WAV audio
+
+Transcript
+
+Pose keypoint metadata
+
+Depth JSON
+
+Final Output
+
+Mentor Performance Report:
+
+Transcript
+
+Gesture analysis
+
+Depth analysis
+
+Consolidated scores
+
+Segment-wise interpretation
+
+4. Design Considerations
+
+CPU-first optimization: No GPU required
+
+Graceful fallbacks: Ollama optional
+
+Isolated modules: Easy replacement/swapping
+
+Caching: Model loading occurs once per session
+
+Reproducibility: Each component is deterministic when LLM is not used
+
+5. Deployment Notes
+
+Suitable for:
+
+Local evaluation
+
+Institutional desktop use
+
+Cloud deployment with Streamlit/Gradio
+
+Can be expanded with:
+
+REST API
+
+Batch processing
+
+Comparative dashboards
