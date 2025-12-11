@@ -9,7 +9,9 @@
 ## 🚀 Overview
 
 Evaluating teaching quality across large education ecosystems is slow, subjective, and inconsistent.
-**Mentor-Scoring-AI** is an **AI-powered multimodal assessment system** that analyzes video lectures and automatically scores a mentor on:
+**Mentor-Scoring-AI** solves this using a **multimodal, fully automated evaluation system** that scores teaching quality directly from recorded lecture videos.
+
+Our AI analyzes:
 
 * Communication clarity
 * Engagement & gestures
@@ -17,56 +19,62 @@ Evaluating teaching quality across large education ecosystems is slow, subjectiv
 * Confidence & pacing
 * Interaction quality
 
-All using **audio, visual pose analysis, and transcript intelligence**.
-
-Built as a **lightweight, on-device, offline-capable prototype**, our solution focuses on **scalability, objectivity, and automation**—precisely addressing the Problem Statement #2 of the hackathon.
+Using **video pose detection, audio transcription, and transcript content intelligence** — all running **locally**, CPU-friendly, no external LLM or cloud dependency.
 
 ---
 
 ## 🧠 Key Features
 
-### 🔊 **Audio Intelligence (Whisper + faster-whisper)**
+### 🔊 **Audio Intelligence (Whisper Speech-to-Text)**
 
-* Clean audio extraction (FFmpeg)
-* Fast speech-to-text transcription
-* Sentence & vocabulary-based clarity scoring
+* Local Whisper base model
+* Accurate transcription on CPU
+* Clean audio extraction using FFmpeg
+* Sentence clarity & vocabulary richness scoring
 
-### 👁️ **Visual + Gesture Intelligence (YOLOv11 Pose)**
+### 👁️ **Visual + Gesture Intelligence (YOLO Pose)**
 
-* Hand movement analysis → engagement score
-* Face visibility & eye-contact tracking → confidence score
-* Lightweight YOLOv11n → **5× faster** processing
+* YOLOv11n-Pose → extremely fast pose tracking
+* Hand movement → engagement score
+* Face visibility & eye-contact cues → confidence score
+* Frame sampling optimized for speed
 
-### 📄 **Concept Depth & Explanation Analysis**
+### 🧮 **Local Technical Depth Estimation (No LLM Required)**
 
-* Ollama Llama3 local inference (if available)
-* Smart fallback heuristic scoring
-* Segment-wise depth metrics
+Your updated code uses **pure local heuristic-based depth scoring**, including:
 
-### 🎛️ **Unified Streamlit Dashboard**
+* Vocabulary diversity
+* Rare/long word usage
+* Technical keyword detection
+* Sentence structure
+* Automatic segment-based depth scoring
 
-* Upload or URL-based analysis
-* Instant breakdown of all metrics
-* Tab-wise transcript & gesture insights
-* 1-click evaluation report
+### 🎛️ **Streamlit Evaluation Dashboard**
+
+* Upload video or use URL (YouTube supported)
+* Real-time transcript + gesture analysis
+* Segment-wise depth scoring
+* Final weighted “Mentor Score”
+* Downloadable evaluation report
 
 ---
 
 ## 🎯 Why This Matters
 
-Institutions often deal with:
+Institutions face major challenges:
 
-* Highly variable mentor performance
-* Lack of standardized evaluation
-* Manual review overhead
-* Difficulty scaling quality checks
+* Manual evaluation is slow
+* Scoring varies between reviewers
+* No standardized metrics
+* No large-scale automation
 
-**Our system solves this by offering:**
-✔ Consistent, unbiased scoring
-✔ Automated evaluation — scalable to 1,000+ videos
-✔ Actionable insights for teacher improvement
-✔ Offline/on-device capability → low-cost deployment
-✔ Multimodal analysis like real human evaluators
+**Mentor-Scoring-AI delivers:**
+
+✔ Consistent, objective scoring
+✔ Fully automated workflow
+✔ Scalable to thousands of videos
+✔ CPU-only & offline-friendly
+✔ Multimodal evaluation similar to human observation
 
 ---
 
@@ -81,14 +89,14 @@ Institutions often deal with:
                   ┌─────────────────┼──────────────────┐
                   │                 │                  │
         ┌─────────▼──────┐ ┌────────▼────────┐ ┌────────▼─────────┐
-        │  Audio Extract  │ │   Video Frames   │ │ Transcript Engine │
-        │   (FFmpeg)      │ │  Sampling (cv2)  │ │ (Whisper/Faster)  │
+        │  Audio Extract  │ │   Frame Sampler  │ │ Transcript Engine │
+        │   (FFmpeg)      │ │   (OpenCV)       │ │    (Whisper)      │
         └─────────┬──────┘ └────────┬────────┘ └────────┬─────────┘
                   │                 │                   │
         ┌─────────▼──────┐ ┌────────▼────────┐ ┌────────▼─────────┐
-        │ Speech-to-Text  │ │   YOLO Pose      │ │ Concept Depth AI │
-        │ Whisper Model   │ │ Hand/Eye/Face    │ │ (Ollama / local) │
-        └─────────┬──────┘ │   Detection       │ └────────┬─────────┘
+        │ Speech-to-Text  │ │ YOLO Pose Model  │ │ Local Depth Logic │
+        │    Whisper      │ │ Gesture/Face     │ │   (Heuristic)     │
+        └─────────┬──────┘ │   Analysis        │ └────────┬─────────┘
                   │         └────────┬──────────┘         │
                   │                  │                    │
                   └──────────┬───────┴─────────┬──────────┘
@@ -111,7 +119,6 @@ Institutions often deal with:
 Mentor-Scoring-AI/
 ├── README.md
 ├── requirements.txt
-├── .gitignore
 ├── docs/
 │   ├── system_design.md
 │   ├── architecture.md
@@ -134,9 +141,9 @@ Mentor-Scoring-AI/
 
 ### **AI Models**
 
-* Whisper + faster-whisper (speech-to-text)
-* YOLOv11n-Pose (gesture + visual cues)
-* Llama3 (Ollama) or heuristic fallback (depth scoring)
+* Whisper (local CPU transcription)
+* YOLOv11n-Pose (gesture and face tracking)
+* Local heuristic depth-engine (no LLM)
 
 ### **Core Libraries**
 
@@ -144,141 +151,131 @@ Mentor-Scoring-AI/
 * MoviePy
 * YOLO (Ultralytics)
 * FFmpeg
-* FastAPI (for model structure)
-* Streamlit (demo UI)
+* Streamlit (UI)
+* FastAPI-style processing structure
 
 ---
 
 ## 🧪 Evaluation Metrics
 
-The judge-provided metric distribution is *natively integrated* into our scoring:
+Your scoring system exactly matches the hackathon guidelines:
 
-| Skill Metric        | Weight | Data Source           |
-| ------------------- | ------ | --------------------- |
-| Engagement          | 20%    | YOLO Pose (gestures)  |
-| Communication       | 20%    | Whisper transcript    |
-| Technical Depth     | 30%    | Depth Analysis (LLM)  |
-| Clarity             | 20%    | Transcript complexity |
-| Interaction Quality | 10%    | Eye contact + pacing  |
+| Skill Metric        | Weight | Source                    |
+| ------------------- | ------ | ------------------------- |
+| Engagement          | 20%    | YOLO Pose (hands, motion) |
+| Communication       | 20%    | Whisper transcript        |
+| Technical Depth     | 30%    | Local depth heuristics    |
+| Clarity             | 20%    | Transcript complexity     |
+| Interaction Quality | 10%    | Eye-contact + pacing      |
 
 ---
 
 ## 🛠️ Quick Start (Development)
 
-### 1️⃣ Create virtual environment
+### 1️⃣ Setup Environment
 
 ```bash
 python -m venv venv
-source venv/bin/activate  # or venv\Scripts\activate (Windows)
+source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 2️⃣ FFmpeg configuration
+### 2️⃣ Ensure FFmpeg is Installed
 
-Update path in:
-`src/utils/ffmpeg_utils.py`
-OR ensure ffmpeg is in PATH.
+Update the FFmpeg path inside:
 
-### 3️⃣ Run Streamlit demo
+```
+src/utils/ffmpeg_utils.py
+```
+
+### 3️⃣ Run Streamlit App
 
 ```bash
 streamlit run src/app.py
 ```
 
-### 4️⃣ Upload video → Get full AI report
-
-Accepted formats: `.mp4`, `.mov`, `.avi`.
+### 4️⃣ Upload or paste URL → Get instant evaluation
 
 ---
 
-## 🎥 Demo Output (What Judges Will See)
+## 🎥 Demo Output (Judges Will See)
 
 ### ✔ Transcript Summary
 
-* Word count
+* Total word count
+* Key topics
 * Sentence clarity
-* Key concepts detected
-* Complexity measure
+* Vocabulary richness
 
 ### ✔ Gesture & Engagement Analysis
 
-* Hand movement intensity
-* Eye contact %, face visibility
+* Hand movement score
+* Eye contact and face visibility
 * Confidence cues
-* 25-frame sampled evaluation
 
-### ✔ Depth Score & Reasoning
+### ✔ Technical Depth
 
-* JSON-based segment evaluation
-* LLM reasoning text
-* Overall depth score (0–1)
+* Automatic heuristic-based depth
+* Segment-wise scoring
+* Explanation + reasoning
 
-### ✔ Final “Mentor Score”
+### ✔ Final Mentor Score
 
-Weighted composite score aligned with hackathon criteria.
+Weighted blended score with interpretation.
 
 ---
 
 ## 📈 Innovation & Differentiators
 
-🔥 **5× faster** multimodal processing (YOLO11n + optimized sampling)
-🔥 Local + cloud-free analysis (Ollama fallback)
-🔥 Multi-segment depth scoring
-🔥 Built with low compute footprint (runs on CPU)
-🔥 URL-based YouTube lecture evaluation
-🔥 Production-ready modular architecture
+🔥 5× faster processing using YOLOv11n-Pose
+🔥 Fully local — **no API costs, no LLMs, no internet needed**
+🔥 Local depth analysis engine (unique approach)
+🔥 Optimized for low-end hardware
+🔥 URL + file support
+🔥 Modular AI pipeline
 
 ---
 
-## 🧭 Roadmap (Post-Hackathon)
+## 🧭 Roadmap
 
-* Add **bias-free scoring calibration**
-* Introduce **Live Mentor Evaluation** (real-time camera)
-* Mentor benchmarking dashboard
-* Session comparison & trend analytics
-* Institution-wide scoring API
+* Database storage for mentor scores
+* Historical insights & comparison charts
+* API endpoints for institution portals
+* Real-time evaluation mode (webcam)
+* Improvement recommendations using analytics
 
 ---
 
+## 🔧 Current Implementation Status
 
+### ✔ Streamlit dashboard connected
 
-## Things Left in Implementation (Current Status)
+### ✔ Whisper transcription working
 
-The following components are planned and partially implemented but not fully integrated:
+### ✔ YOLO gesture tracking functional
 
-1. **Database and Dashboard Integration**
+### ✔ Local depth analysis implemented
 
-   * Dashboard UI structure is built
-   * Database linking/connection logic is pending
+### ✔ URL → video → transcript pipeline complete
 
-2. **Database Connection With Main Website**
+### ⏳ Remaining:
 
-   * Backend–DB binding still needs to be implemented
-   * Intended for storing mentor scores, video metadata, and analytics
+1. **Database integration**
+2. **Linking dashboard to main website**
+3. **Final UI polishing**
 
-These features will complete the system’s ability to store evaluations, visualize historical insights, and integrate end-to-end with a centralized platform.
-
-
-
+---
 
 ## 👥 Team
 
-**Abhishek Boyane**
-**Ishan Kalhe**
-**Yash Bhosale**
-**Chetan Patel**
-Roles include:
-
-* AI/ML(**Abhishek Boyane**)
-* Backend
-* Vision Processing(**Yash Bhosale**)
-* Full-stack(**Ishan Kalhe**)
-* UI/UX(**Chetan Patel**)
+**Abhishek Boyane** – AI/ML
+**Ishan Kalhe** – Full-Stack, Backend
+**Yash Bhosale** – Vision Processing
+**Chetan Patel** – UI/UX
 
 ---
 
 ## 📩 Contact
 
-**Email:ishankalhe1@gmail.com** 
-
+**Email:** *[ishankalhe1@gmail.com](mailto:ishankalhe1@gmail.com)*
 
