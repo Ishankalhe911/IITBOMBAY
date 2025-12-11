@@ -1,8 +1,3 @@
-Here is your **system_design.md rewritten in the exact same clean GitHub format** as your Architecture and Evaluation Notes documents.
-The content stays the same — only formatting, structure, and clarity are improved.
-
----
-
 # System Design
 
 This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design emphasizes modularity, reproducibility, and CPU-friendly multimodal processing.
@@ -187,4 +182,3 @@ Potential extensions:
 
 ---
 
-If you want, I can also rewrite **architecture.md**, **README**, or even prepare a **combined PDF documentation** for submission.
