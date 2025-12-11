@@ -242,29 +242,22 @@ Weighted composite score aligned with hackathon criteria.
 
 ## 👥 Team
 
-**Abhishek & Team**
+**Abhishek Boyane**
+**Ishan Kalhe**
+**Yash Bhosale**
+**Chetan Patel**
 Roles include:
 
-* AI/ML
+* AI/ML(**Abhishek Boyane**)
 * Backend
-* Vision Processing
-* Full-stack
-* UI/UX
+* Vision Processing(**Yash Bhosale**)
+* Full-stack(**Ishan Kalhe**)
+* UI/UX(**Chetan Patel**)
 
 ---
 
 ## 📩 Contact
 
-For demo or collaboration:
-**Email:** (team contact)
+**Email:ishankalhe1@gmail.com** 
 
----
 
-If you'd like, I can also rewrite:
-
-✅ architecture.md
-✅ system_design.md
-✅ evaluation_notes.md
-to match the same professional standard.
-
-Just say **"Rewrite the architecture file"** or upload the docs.
