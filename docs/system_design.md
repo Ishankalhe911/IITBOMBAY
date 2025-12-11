@@ -1,179 +1,190 @@
-##System Design
+Here is your **system_design.md rewritten in the exact same clean GitHub format** as your Architecture and Evaluation Notes documents.
+The content stays the same — only formatting, structure, and clarity are improved.
 
-**This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design focuses on modularity, reproducibility, and CPU-friendly multimodal processing
-*1. High-Level Workflow
+---
+
+# System Design
+
+This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design emphasizes modularity, reproducibility, and CPU-friendly multimodal processing.
+
+---
+
+## 1. High-Level Workflow
+
+```
                 ┌────────────────────────┐
                 │     Video Input        │
                 │ (Upload or URL Fetch)  │
                 └─────────────┬──────────┘
                               │
                 ┌─────────────▼─────────────┐
-                │  Audio Extraction (FFmpeg)│
+                │  Audio Extraction (FFmpeg) │
                 └─────────────┬─────────────┘
                               │
                 ┌─────────────▼─────────────┐
-                │   Speech-to-Text (Whisper)│
+                │  Speech-to-Text (Whisper) │
                 └─────────────┬─────────────┘
                               │
                 ┌─────────────▼────────────┐
-                │ Transcript Processing    │
-                │ (Clarity + Segmentation) │
+                │ Transcript Processing     │
+                │ (Clarity + Segmentation)  │
                 └─────────────┬────────────┘
                               │
      ┌────────────────────────▼────────────────────────┐
-     │         Parallel Multimodal Processing          │
+     │              Parallel Multimodal Processing      │
      │                                                 │
-     │   ┌──────────────────────────┐   ┌───────────┐  │
-     │   │ Visual/Gesture Analysis  │   │ Depth AI  │ │
-     │   │ (YOLO Pose Sampling)     │   │ LLM/Heur. │ │
+     │   ┌──────────────────────────┐   ┌───────────┐ │
+     │   │ Visual/Gesture Analysis  │   │ Depth AI   │ │
+     │   │ (YOLO Pose Sampling)     │   │ LLM/Heur.  │ │
      │   └──────────────────────────┘   └───────────┘ │
      └────────────────────────┬───────────────────────┘
                               │
                 ┌─────────────▼────────────┐
-                │     Metric Aggregation   │
-                │  (Weighted Scoring Model)│
+                │     Metric Aggregation    │
+                │  (Weighted Scoring Model) │
                 └─────────────┬────────────┘
                               │
                 ┌─────────────▼────────────┐
-                │       Streamlit UI       │
-                │  Results + Visualization │
+                │        Streamlit UI       │
+                │  Results + Visualization  │
                 └──────────────────────────┘
+```
 
-2. Components
-2.1 Streamlit UI (src/app.py)
+---
 
-Manages input: upload or URL-based videos
+## 2. Components
 
-Displays processing steps, results, and tables
+### **2.1 Streamlit UI (`src/app.py`)**
 
-Orchestrates calls to all AI modules
+* Manages user input: video upload or URL
+* Displays progress indicators and evaluation results
+* Orchestrates calls to the audio, gesture, and depth modules
+* Serves as the unified interface for the prototype
 
-Suitable for demo and prototype evaluation
+---
 
-2.2 Audio Extraction (utils/ffmpeg_utils.py)
+### **2.2 Audio Extraction (`utils/ffmpeg_utils.py`)**
 
-Converts video → WAV using FFmpeg
+* Converts MP4 → WAV using FFmpeg
+* Ensures consistent sampling rate (16kHz)
+* Handles temporary file creation and cleanup
 
-Normalizes audio for Whisper STT
+---
 
-Handles file safety and temporary paths
+### **2.3 Transcription (`ai/transcribe.py`)**
 
-2.3 Transcription Module (ai/transcribe.py)
+* Uses `faster-whisper` for CPU-optimized STT
+* Falls back to standard Whisper if necessary
+* Produces:
 
-Uses faster-whisper for CPU-efficient transcription
+  * transcript text
+  * word counts
+  * clarity indicators
 
-Falls back to standard Whisper when needed
+---
 
-Produces:
+### **2.4 Gesture Analysis (`ai/gesture_analysis.py`)**
 
-transcript text
+* Performs pose detection using YOLOv11n/YOLOv8n
+* Samples ~25 frames for fast, representative analysis
+* Extracts engagement-related signals:
 
-word count
+  * hand movement
+  * face visibility
+  * gaze orientation
+  * pose confidence
 
-clarity metrics
+---
 
-2.4 Gesture Analysis (ai/gesture_analysis.py)
+### **2.5 Depth Analysis (`ai/depth_analysis.py`)**
 
-YOLOv11n/YOLOv8n pose estimation
+* Two-mode depth evaluation:
 
-Samples ~25 frames for fast evaluation
+  * **LLM-based analysis** (Ollama Llama)
+  * **Deterministic heuristics** when LLM is unavailable
+* Outputs structured depth JSON:
 
-Tracks:
+  * `overall_depth_score`
+  * `reasoning`
+  * `per_segment[]`
 
-Hand movement frequency
+---
 
-Eye contact
+### **2.6 Scoring Model**
 
-Face visibility
+Weighted scoring in alignment with the hackathon’s problem statement:
 
-Engagement score
+| Metric              | Weight |
+| ------------------- | ------ |
+| Engagement          | 20%    |
+| Communication       | 20%    |
+| Technical Depth     | 30%    |
+| Clarity             | 20%    |
+| Interaction Quality | 10%    |
 
-2.5 Depth Analysis (ai/depth_analysis.py)
+Each module contributes to one or more metrics.
 
-Two-layer depth scoring:
+---
 
-Ollama Llama-based reasoning (if available)
+## 3. Data Flow
 
-Fallback heuristic engine (vocabulary richness, technical terms, segmentation)
+### **Input Formats**
 
-Returns structured depth JSON:
+* `.mp4`, `.mov`, `.avi`
+* Public YouTube/video URLs
 
-{
-  "overall_depth_score": 0.71,
-  "reasoning": "...",
-  "per_segment": [...]
-}
+### **Intermediate Outputs**
 
-2.6 Scoring & Metrics
+* WAV audio
+* Transcript text
+* Pose metadata
+* Depth analysis JSON
 
-Weighted according to problem statement:
+### **Final Output**
 
-Metric	Weight
-Engagement	20%
-Communication	20%
-Technical Depth	30%
-Clarity	20%
-Interaction Quality	10%
+A consolidated evaluation report containing:
 
-Modules contribute to specific metrics.
+* Transcript + clarity analysis
+* Engagement metrics
+* Technical depth assessment
+* Segment breakdown
+* Composite mentor score
 
-3. Data Flow
-Input
+---
 
-.mp4, .mov, .avi
+## 4. Design Considerations
 
-YouTube/public URLs
+* **CPU-first optimization**
+  All models selected for lightweight, real-time CPU execution.
 
-Intermediate Outputs
+* **Graceful fallback mechanism**
+  If Ollama is not available, deterministic heuristics ensure consistent results.
 
-WAV audio
+* **Modular separation**
+  Each AI module is isolated for easy replacement and independent testing.
 
-Transcript
+* **Caching & performance**
+  YOLO and Whisper models are loaded once and reused across evaluations.
 
-Pose keypoint metadata
+* **Reproducibility**
+  Ensures deterministic scoring when no LLM is used.
 
-Depth JSON
+---
 
-Final Output
+## 5. Deployment Notes
 
-Mentor Performance Report:
+The system is designed for:
 
-Transcript
+* Local offline use
+* Institutional computer labs
+* Lightweight cloud deployments (Streamlit/Gradio)
 
-Gesture analysis
+Potential extensions:
 
-Depth analysis
+* Batch processing service
+* REST API for institutions
+* Multi-mentor comparison dashboards
 
-Consolidated scores
+---
 
-Segment-wise interpretation
-
-4. Design Considerations
-
-CPU-first optimization: No GPU required
-
-Graceful fallbacks: Ollama optional
-
-Isolated modules: Easy replacement/swapping
-
-Caching: Model loading occurs once per session
-
-Reproducibility: Each component is deterministic when LLM is not used
-
-5. Deployment Notes
-
-Suitable for:
-
-Local evaluation
-
-Institutional desktop use
-
-Cloud deployment with Streamlit/Gradio
-
-Can be expanded with:
-
-REST API
-
-Batch processing
-
-Comparative dashboards
+If you want, I can also rewrite **architecture.md**, **README**, or even prepare a **combined PDF documentation** for submission.
