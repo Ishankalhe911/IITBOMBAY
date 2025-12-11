@@ -1,7 +1,4 @@
-Here is your **evaluation_notes.md rewritten in the exact same formatting style** as the Architecture example — clean, structured, GitHub-ready, with proper headings, bolding, and bullet formatting.
-
----
-
+Here is your **evaluation_notes.md rewritten in the exact same formatting style** as the Architecture example — clean, structured, GitHub-ready, with proper 
 # Evaluation Notes
 
 This document summarizes how the system computes its scores, how each metric is interpreted, and how the evaluation pipeline aligns with the official judging criteria of the Hackathon.
@@ -165,6 +162,4 @@ All scoring metrics map **1:1** with the official problem statement.
 * Bias mitigation
 * Calibration against human evaluators
 
----
 
-If you want, I can also **format system_design.md** in the same style or refine any of the other docs.
