@@ -1,38 +1,37 @@
-System Design
+##System Design
 
-This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design focuses on modularity, reproducibility, and CPU-friendly multimodal processing.
-
-1. High-Level Workflow
+**This document outlines the end-to-end workflow, component responsibilities, and data flow of the Mentor-Scoring-AI system. The design focuses on modularity, reproducibility, and CPU-friendly multimodal processing
+*1. High-Level Workflow
                 ┌────────────────────────┐
                 │     Video Input        │
                 │ (Upload or URL Fetch)  │
                 └─────────────┬──────────┘
                               │
                 ┌─────────────▼─────────────┐
-                │  Audio Extraction (FFmpeg) │
+                │  Audio Extraction (FFmpeg)│
                 └─────────────┬─────────────┘
                               │
                 ┌─────────────▼─────────────┐
-                │   Speech-to-Text (Whisper) │
+                │   Speech-to-Text (Whisper)│
                 └─────────────┬─────────────┘
                               │
                 ┌─────────────▼────────────┐
-                │ Transcript Processing     │
-                │ (Clarity + Segmentation)  │
+                │ Transcript Processing    │
+                │ (Clarity + Segmentation) │
                 └─────────────┬────────────┘
                               │
      ┌────────────────────────▼────────────────────────┐
      │         Parallel Multimodal Processing          │
      │                                                 │
-     │   ┌──────────────────────────┐   ┌───────────┐ │
-     │   │ Visual/Gesture Analysis  │   │ Depth AI   │ │
-     │   │ (YOLO Pose Sampling)     │   │ LLM/Heur.  │ │
+     │   ┌──────────────────────────┐   ┌───────────┐  │
+     │   │ Visual/Gesture Analysis  │   │ Depth AI  │ │
+     │   │ (YOLO Pose Sampling)     │   │ LLM/Heur. │ │
      │   └──────────────────────────┘   └───────────┘ │
      └────────────────────────┬───────────────────────┘
                               │
                 ┌─────────────▼────────────┐
-                │     Metric Aggregation    │
-                │  (Weighted Scoring Model) │
+                │     Metric Aggregation   │
+                │  (Weighted Scoring Model)│
                 └─────────────┬────────────┘
                               │
                 ┌─────────────▼────────────┐
