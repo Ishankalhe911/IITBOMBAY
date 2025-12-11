@@ -246,25 +246,27 @@ Weighted blended score with interpretation.
 
 ---
 
-## 🔧 Current Implementation Status
+## **Things Left in Implementation (Current Status)**
 
-### ✔ Streamlit dashboard connected
+The following components are planned and partially implemented but not fully integrated:
 
-### ✔ Whisper transcription working
+1. **Database and Dashboard Integration**
 
-### ✔ YOLO gesture tracking functional
+   * Dashboard UI structure is built
+   * Database linking/connection logic is pending
 
-### ✔ Local depth analysis implemented
+2. **Database Connection With Main Website**
 
-### ✔ URL → video → transcript pipeline complete
+   * Backend–DB binding still needs to be implemented
+   * Intended for storing mentor scores, video metadata, and analytics
 
-### ⏳ Remaining:
+3. **Deployment (Pending)**
 
-1. **Database integration**
-2. **Linking dashboard to main website**
-3. **Final UI polishing**
+   * The complete system deployment is still pending
+   * We are working to deploy it at the earliest, most likely using **Railway** for hosting
 
----
+These features will complete the system’s ability to store evaluations, visualize historical insights, deploy it publicly, and integrate end-to-end with a centralized platform.
+
 
 ## 👥 Team
 
